@@ -1,0 +1,54 @@
+name: CI Pipeline
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version: [20, 22, 24]
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with: 
+                node-version: ${{ matrix.node-version }}
+                cache: npm
+                cache-dependency-path: app/package-lock.json
+            - run: cd app && npm ci && npm test
+        
+    build:
+        needs: test
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: docker/setup-buildx-action@v3
+            - uses: docker/build-push-action@v5
+              with:
+                context: ./app
+                push: false
+                tags: demo-app:${{ github.sha }}
+    security:
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v4
+        - uses: aquasecurity/trivy-action@v0.36.0
+          with:
+            scan-type: fs
+            scan-ref: app/
+            severity: HIGH,CRITICAL
+            exit-code: 1
+            format: table
+
+    deploy:
+        needs: [build, security]
+        if: github.ref == 'refs/heads/main'
+        runs-on: ubuntu-latest
+        environment: production
+        steps:
+        - run: echo "Deploying ${{ github.sha }}..."
+        
