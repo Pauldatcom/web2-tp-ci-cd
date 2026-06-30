@@ -19,18 +19,14 @@ jobs:
                 cache: npm
                 cache-dependency-path: app/package-lock.json
             - run: cd app && npm ci && npm test
-        
+            
     build:
         needs: test
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-            - uses: docker/setup-buildx-action@v3
-            - uses: docker/build-push-action@v5
-              with:
-                context: ./app
-                push: false
-                tags: demo-app:${{ github.sha }}
+        uses: ./.github/workflows/reusable-docker.yml
+        with:
+            image-name: devops-app
+            context: ./app    
+
     security:
         needs: build
         runs-on: ubuntu-latest
@@ -44,11 +40,32 @@ jobs:
             exit-code: 1
             format: table
 
-    deploy:
+    deploy-staging:
         needs: [build, security]
+        if: github.ref == 'refs/heads/main'
+        runs-on: ubuntu-latest
+        environment: staging
+        steps:
+            - run: echo "Deploying to staging..."
+            - name: Use secrets
+              env:
+                DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+                API_KEY: ${{ secrets.API_KEY }}
+              run: |
+                echo "Secrets are masked in logs"
+                echo "DB_PASSWORD length: ${#DB_PASSWORD}"
+
+    deploy-production:
+        needs: deploy-staging
         if: github.ref == 'refs/heads/main'
         runs-on: ubuntu-latest
         environment: production
         steps:
-        - run: echo "Deploying ${{ github.sha }}..."
-        
+            - run: echo "Deploying to production..."
+            - name: Use secrets
+              env:
+                DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+                API_KEY: ${{ secrets.API_KEY }}
+              run: |
+                echo "Secrets are masked in logs"
+                echo "DB_PASSWORD length: ${#DB_PASSWORD}"

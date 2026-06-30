@@ -1,4 +1,4 @@
-FROM node:20-alpine AS test
+FROM node:22-alpine AS test
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -6,7 +6,7 @@ COPY src ./src
 COPY test ./test
 RUN npm test
 
-FROM node:20-alpine AS production
+FROM node:22-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package*.json ./
