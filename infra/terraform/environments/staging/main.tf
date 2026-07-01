@@ -42,6 +42,11 @@ variable "db_password" {
 }
 variable "db_port" { type = number }
 
+variable "app_log_level" {
+  type    = string
+  default = "info"
+}
+
 output "web_urls" {
   value = module.webapp.urls
 }
@@ -49,11 +54,6 @@ output "web_urls" {
 output "db_connection" {
   value     = module.database.connection_string
   sensitive = true
-}
-
-variable "app_log_level" {
-  type    = string
-  default = "info"
 }
 
 output "ansible_inventory" {
